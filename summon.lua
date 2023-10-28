@@ -67,7 +67,7 @@ local summon = {
     -- there seems to be no good event/time to check if we are in a group
     -- group roster changes fail to tell us when we are NOT in a group
     -- so we're gonna bodge this one, worst case is it takes a while to clear the list
-    C_Timer.After(10, self.postInitSetup) -- bumped to 10 seconds, after laggy server experiences, an eternity I know
+    C_Timer.After(3, self.postInitSetup) -- bumped to 10 seconds, after laggy server experiences, an eternity I know
   end,
 
   ---------------------------------
@@ -531,7 +531,7 @@ local summon = {
     self = addonData.summon -- often we are not ourselves, be positive
 
     if not SteaSummonFrame then
-      local f = CreateFrame("Frame", "SteaSummonFrame", UIParent, "AnimatedShineTemplate")
+      local f = CreateFrame("Frame", "SteaSummonFrame", UIParent, PortraitFrameTemplateMixin and "PortraitFrameTemplateNoCloseButton")
       f:SetPoint("CENTER")
       f:SetSize(300, 250)
       f:SetScale(SteaSummonSave.windowSize)
@@ -543,15 +543,6 @@ local summon = {
         f:SetPoint(wpos[1], wpos[2], wpos[3], wpos[4], wpos[5])
         f:SetSize(wpos["width"], wpos["height"])
       end
-
-      f:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\PVPFrame\\UI-Character-PVP-Highlight",
-        edgeSize = 16,
-        insets = { left = 8, right = 6, top = 8, bottom = 8 },
-      })
-      f:SetBackdropColor(.57, .47, .85, 0.5)
-      f:SetBackdropBorderColor(.57, .47, .85, 0.5)
 
       --- Movable
       f:SetMovable(true)
@@ -577,9 +568,11 @@ local summon = {
         if pos["height"] < 65 then
           SteaSummonButtonFrame:Hide()
           SteaSummonScrollFrame:Hide()
+          SteaSummonFallbackIcon:Hide()
         else
           SteaSummonScrollFrame:Show()
           SteaSummonButtonFrame:Show()
+          SteaSummonFallbackIcon:Show()
         end
 
         if pos["height"] < 42 then
@@ -611,18 +604,30 @@ local summon = {
 
       f:SetScript("OnMouseUp", movefunc)
 
-      --- SteaSummonScrollFrame
-      local sf = CreateFrame("ScrollFrame", "SteaSummonScrollFrame", SteaSummonFrame, "UIPanelScrollFrameTemplate")
-      sf:SetPoint("LEFT", 8, 0)
-      sf:SetPoint("RIGHT", -40, 0)
-      sf:SetPoint("TOP", 0, -84)
-      sf:SetPoint("BOTTOM", 0, 30)
-      sf:SetScale(0.5)
+      --- SteaSummonFallbackIcon
+      local fbi = CreateFrame("Frame", "SteaSummonFallbackIcon", SteaSummonFrame, BackdropTemplateMixin and "BackdropTemplate")
+      fbi:SetPoint("TOPLEFT", "SteaSummonFrame", "TOPLEFT", -5, 7)
+      fbi:SetScale(1)
+      --fbi:SetPoint("CENTER")
+      fbi:SetSize(60,60)
+      fbi:SetFrameLevel(1)
+      fbi.tex = fbi:CreateTexture()
+      fbi.tex:SetAllPoints(fbi)
+      SetPortraitToTexture(fbi.tex, "interface/icons/inv_misc_ticket_tarot_maelstrom_01")
 
-      addonData.buttonFrame = CreateFrame("Frame", "SteaSummonButtonFrame", SteaSummonFrame)
+      --- SteaSummonScrollFrame
+      local sf = CreateFrame("ScrollFrame", "SteaSummonScrollFrame", SteaSummonFrame, BackdropTemplateMixin and "UIPanelScrollFrameTemplate")
+      sf:SetPoint("LEFT", 0, 0)
+      sf:SetPoint("RIGHT", -30, 0)
+      sf:SetPoint("TOP", 0, -55)
+      sf:SetPoint("BOTTOM", 0, 5)
+      sf:SetScale(1)
+
+      
+      addonData.buttonFrame = CreateFrame("Frame", "SteaSummonButtonFrame", SteaSummonFrame, BackdropTemplateMixin and "BackdropTemplate")
       local x, y = sf:GetSize()
       addonData.buttonFrame:SetSize(x-10, y)
-      addonData.buttonFrame:SetScale(SteaSummonSave.listSize)
+      addonData.buttonFrame:SetScale(SteaSummonSave.listSize/2)
       sf:SetScrollChild(addonData.buttonFrame)
 
       --- Table of summon info
@@ -632,11 +637,13 @@ local summon = {
       end
 
       --- Setup Next button
-      addonData.buttons[38].Button:SetPoint("TOPLEFT","SteaSummonFrame","TOPLEFT", -10, 10)
+      addonData.buttons[38].Button:SetPoint("TOPLEFT","SteaSummonFrame","TOPLEFT", -5, 7)
       addonData.buttons[38].Button:SetText(L["Next"])
 
       --- Setup Summon Me button
-      addonData.buttons[39].Button:SetPoint("TOPLEFT","SteaSummonFrame","TOPLEFT", -10, 10)
+      addonData.buttons[39].Button:SetPoint("CENTER",addonData.buttons[38].Button,"CENTER", 0, 0)
+      addonData.buttons[39].Button:SetFrameLevel(100)
+      addonData.buttons[39].Button:SetScale(1.2)
       addonData.buttons[39].Button:SetScript("OnClick", function()
         if self:findWaitingPlayer(self.me) then
           self:resetMe()
@@ -655,13 +662,14 @@ local summon = {
 
       --- Resizable
       f:SetResizable(true)
-      f:SetMinResize(80, 25)
+      f:SetResizeBounds(270, 160, 270, GetScreenHeight()*.75)
       f:SetClampedToScreen(true)
 
-      local rb = CreateFrame("Button", "SteaSummonResizeButton", SteaSummonFrame)
-      rb:SetPoint("BOTTOMRIGHT", -6, 7)
-      rb:SetSize(8, 8)
+      local rb = CreateFrame("Button", "SteaSummonResizeButton", SteaSummonFrame, BackdropTemplateMixin and "BackdropTemplate")
+      rb:SetPoint("BOTTOMRIGHT", -2, 2)
+      rb:SetSize(12, 12)
 
+      
       rb:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
       rb:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
       rb:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
@@ -688,11 +696,11 @@ local summon = {
         end
 
         --- summon to button
-        local place = CreateFrame("Button", "SteaSummonToButton", SteaSummonFrame, "TruncatedButtonTemplate")
+        local place = CreateFrame("Button", "SteaSummonToButton", SteaSummonFrame, BackdropTemplateMixin and "TruncatedButtonTemplate")
         place:SetNormalTexture("Interface\\Buttons\\UI-GuildButton-MOTD-Disabled")
         place:SetHighlightTexture("Interface\\Buttons\\UI-GuildButton-MOTD-Disabled")
         place:SetPushedTexture("Interface\\Buttons\\UI-GuildButton-MOTD-Disabled")
-        place:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 42, -8)
+        place:SetPoint("TOPRIGHT","SteaSummonFrame", "TOPRIGHT", -56, -5)
         place:SetSize(16,16)
         place:RegisterForClicks()
         place:SetScript("OnMouseUp", summonTo)
@@ -718,8 +726,8 @@ local summon = {
           end
         end
 
-        local invdest = CreateFrame("Button", "SteaSummonInvisibleSetDestinationButton", SteaSummonFrame, "UIPanelButtonTemplate")
-        invdest:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 75, -8)
+        local invdest = CreateFrame("Button", "SteaSummonInvisibleSetDestinationButton", SteaSummonFrame, BackdropTemplateMixin and "UIPanelButtonTemplate")
+        invdest:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 75, -24)
         invdest:SetPoint("RIGHT","SteaSummonFrame", "RIGHT", 24)
         invdest:SetAlpha(0)
         invdest:SetFrameLevel(2)
@@ -739,41 +747,42 @@ local summon = {
 
       --- shard count icon
       if self.isWarlock then
-        f.shards = CreateFrame("Frame", "SteaSummonShardIcon", SteaSummonFrame)
+        f.shards = CreateFrame("Frame", "SteaSummonShardIcon", SteaSummonFrame, BackdropTemplateMixin and "BackdropTemplate")
         f.shards:SetBackdrop({
           bgFile = "Interface\\ICONS\\INV_Misc_Gem_Amethyst_02",
         })
-        f.shards:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 45, -24)
+        f.shards:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 64, -6)
         f.shards:SetSize(12,12)
 
         f.shards.count = f.shards:CreateFontString(nil,"ARTWORK", nil, 7)
-        f.shards.count:SetFont("Fonts\\ARIALN.ttf", 12, "BOLD")
-        f.shards.count:SetPoint("CENTER","SteaSummonShardIcon", "CENTER", 5, -5)
+        f.shards.count:SetFont("Fonts\\FRIZQT__.ttf", 12, "OUTLINE")
+        f.shards.count:SetPoint("LEFT","SteaSummonShardIcon", "RIGHT", 1, 0)
         f.shards.count:SetText("0")
         f.shards.count:SetTextColor(1,1,1,1)
+        f.shards.count:SetShadowOffset(3,-3)
         f.shards.count:Show()
         self.shards = self:shardCount()
       end
 
       --- context menu
       f.context = CreateFrame("Button", "SteaSummonContextMenuButton",
-          SteaSummonFrame, "UIPanelButtonTemplate")
-      f.context:SetWidth(10)
-      f.context:SetHeight(10)
+          SteaSummonFrame, BackdropTemplateMixin and "UIPanelButtonTemplate")
+      f.context:SetWidth(24)
+      f.context:SetHeight(24)
       f.context:SetText(">")
-      f.context:SetPoint("TOPLEFT","SteaSummonFrame","TOPRIGHT", -17, -7)
+      f.context:SetPoint("TOPRIGHT","SteaSummonFrame","TOPRIGHT", -1, 2)
       f.context:SetScript("OnMouseUp", function() addonData.appbutton:menu() end)
       f.context:SetFrameLevel(3)
-      f.context:SetAlpha(0.5)
+      f.context:SetAlpha(1)
 
       --- raid lead button
       local function relinquishLead()
         addonData.raid:relinquish()
       end
 
-      local lead = CreateFrame("Button", "SteaSummonRelinquishRaidLeadButton", SteaSummonFrame, "TruncatedButtonTemplate")
+      local lead = CreateFrame("Button", "SteaSummonRelinquishRaidLeadButton", SteaSummonFrame, BackdropTemplateMixin and "TruncatedButtonTemplate")
       lead:SetNormalTexture("Interface\\GROUPFRAME\\UI-Group-LeaderIcon")
-      lead:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 60, 4)
+      lead:SetPoint("TOPRIGHT","SteaSummonFrame", "TOPRIGHT", -32, -5)
       lead:SetSize(16,16)
       lead:RegisterForClicks()
       lead:SetScript("OnMouseUp", relinquishLead)
@@ -794,28 +803,30 @@ local summon = {
       --- Text items
 
       f.location = f:CreateFontString(nil,"ARTWORK")
-      f.location:SetFont("Fonts\\ARIALN.ttf", 8, "OUTLINE")
-      f.location:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 70, -8)
-      f.location:SetPoint("RIGHT", -20, 0)
+      f.location:SetFont("Fonts\\ARIALN.ttf", 12, "OUTLINE")
+      f.location:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 64, -24)
+      f.location:SetPoint("RIGHT", -25, 0)
       f.location:SetJustifyH("RIGHT")
       f.location:SetJustifyV("TOP")
-      f.location:SetAlpha(.5)
+      f.location:SetAlpha(1)
       f.location:SetText("")
 
       f.destination = f:CreateFontString(nil,"ARTWORK")
-      f.destination:SetFont("Fonts\\ARIALN.ttf", 8, "OUTLINE")
+      f.destination:SetFont("Fonts\\ARIALN.ttf", 12, "OUTLINE")
       f.destination:SetPoint("TOP", f.location, "BOTTOM", 0, 0)
       f.destination:SetPoint("LEFT", f.location)
-      f.destination:SetPoint("RIGHT", -20, 0)
+      f.destination:SetPoint("RIGHT", -25, 0)
       f.destination:SetJustifyH("RIGHT")
       f.destination:SetJustifyV("TOP")
-      f.destination:SetAlpha(.5)
+      f.destination:SetAlpha(1)
       f.destination:SetText("")
 
       f.status = f:CreateFontString(nil,"ARTWORK")
-      f.status:SetFont("Fonts\\ARIALN.ttf", 8, "OUTLINE")
-      f.status:SetPoint("TOPRIGHT","SteaSummonFrame", "TOPRIGHT", -10, 10)
-      f.status:SetAlpha(.5)
+      f.status:SetFont("Fonts\\ARIALN.ttf", 12, "OUTLINE")
+      f.status:SetPoint("BOTTOMRIGHT","SteaSummonFrame", "BOTTOMRIGHT", -25, 5)
+      f.status:SetJustifyH("RIGHT")
+      f.status:SetJustifyV("BOTTOM")
+      f.status:SetAlpha(1)
       f.status:SetText("")
 
       movefunc()
@@ -1151,7 +1162,7 @@ local summon = {
     local tex, texDisabled,texHighlight, texPushed, icon
 
     addonData.buttons[i] = {}
-    addonData.buttons[i].Button = CreateFrame("Button", "SteaSummonButton"..i, parent, "SecureActionButtonTemplate");
+    addonData.buttons[i].Button = CreateFrame("Button", "SteaSummonButton"..i, parent, BackdropTemplateMixin and "SecureActionButtonTemplate");
     addonData.buttons[i].Button:SetPoint("TOPLEFT","SteaSummonButtonFrame","TOPLEFT", wpad,-(((i-1)*bh)+hpad))
     addonData.buttons[i].Button:SetNormalFontObject("GameFontNormalSmall")
     tex = addonData.buttons[i].Button:CreateTexture()
@@ -1177,15 +1188,22 @@ local summon = {
       -- icon
       icon = addonData.buttons[i].Button:CreateTexture()
       if i == 38 then
-        tex:SetTexture("Interface/Buttons/UI-QuickSlot2")
-        tex:SetTexCoord(0.2, 0.8, 0.2, 0.8)
-        texPushed:SetTexture("Interface/Buttons/UI-QuickSlot")
-        texPushed:SetTexCoord(0, 1, 0, 1)
-        texDisabled:SetTexture("Interface/Buttons/UI-QuickSlotRed")
-        texDisabled:SetTexCoord(0, 1, 0, 1)
-        texHighlight:SetTexture("Interface/Buttons/UI-QuickSlot-Depress")
-        texHighlight:SetTexCoord(0, 1, 0, 1)
-        icon:SetTexture("Interface/ICONS/Spell_Shadow_Twilight")
+        addonData.buttons[i].Button:SetScale(1.2)
+        --tex:SetTexture("Interface/Buttons/UI-QuickSlot2")
+        --tex:SetTexCoord(0.2, 0.8, 0.2, 0.8)
+        SetPortraitToTexture(tex, "Interface/Buttons/UI-QuickSlot2")
+        --texPushed:SetTexture("Interface/Buttons/UI-QuickSlot")
+        --texPushed:SetTexCoord(0, 1, 0, 1)
+        SetPortraitToTexture(texPushed, "Interface/Buttons/UI-QuickSlot-Depress")
+        --texDisabled:SetTexture("Interface/Buttons/UI-QuickSlotRed")
+        --texDisabled:SetTexCoord(0, 1, 0, 1)
+        SetPortraitToTexture(texDisabled, "Interface/Buttons/UI-QuickSlotRed")
+        --texHighlight:SetTexture("Interface/Buttons/UI-QuickSlot-Depress")
+        --texHighlight:SetTexCoord(0, 1, 0, 1)
+        SetPortraitToTexture(texHighlight, "Interface\\Buttons\\ButtonHilight-Square")
+        --icon:SetTexture("Interface/ICONS/Spell_Shadow_Twilight")
+        SetPortraitToTexture(icon, "Interface/ICONS/Spell_Shadow_Twilight")
+
         icon:SetTexCoord(0, 1, 0, 1)
         icon:SetAllPoints()
       else
@@ -1198,7 +1216,7 @@ local summon = {
           if addonData.summon.shrunk then
             button:SetWidth(bw - 30)
             button:SetHeight(bw - 30)
-            button:SetPoint("TOPLEFT","SteaSummonFrame","TOPLEFT", -10, 10)
+            button:SetPoint("TOPLEFT","SteaSummonFrame","TOPLEFT", -5, 7)
           end
         end)
 
@@ -1211,13 +1229,13 @@ local summon = {
           else
             button:SetWidth(bw - 30)
             button:SetHeight(bw - 30)
-            button:SetPoint("TOPLEFT","SteaSummonFrame","TOPLEFT", -10, 10)
+            button:SetPoint("TOPLEFT","SteaSummonFrame","TOPLEFT", -5, 7)
             addonData.summon.shrunk = false
           end
         end)
         button.shrink.anim = button.shrink:CreateAnimation("Scale")
-        button.shrink.anim:SetFromScale(1, 1)
-        button.shrink.anim:SetToScale(0.33, 0.33)
+        button.shrink.anim:SetScaleFrom(1, 1)
+        button.shrink.anim:SetScaleTo(0.33, 0.33)
         button.shrink.anim:SetDuration(0.8)
         button.shrink.anim:SetSmoothing("IN")
         button.shrink.anim2 = button.shrink:CreateAnimation("Translation")
@@ -1247,7 +1265,7 @@ local summon = {
 
     if i < 38 then -- last button we use for next summon, so don't want these
       --- flare
-      addonData.buttons[i].flare = CreateFrame("Frame", "SteaSummonFlare"..i, parent)
+      addonData.buttons[i].flare = CreateFrame("Frame", "SteaSummonFlare"..i, parent, BackdropTemplateMixin and "BackdropTemplate")
       addonData.buttons[i].flare:SetHeight(bh + hpad)
       addonData.buttons[i].flare:SetPoint("TOPLEFT","SteaSummonButtonFrame","TOPLEFT", 2,-((i-1)*(bh)+(hpad/2)))
       --addonData.buttons[i].flare:SetPoint("TOPRIGHT","SteaSummonButtonFrame","TOPRIGHT", 0,-(((i-1)*bh)+(hpad/2)))
@@ -1275,14 +1293,14 @@ local summon = {
 
       --- Cancel
       addonData.buttons[i].Cancel = CreateFrame("Button", "SteaSummonCancelButton"..i,
-          parent, "UIPanelCloseButtonNoScripts")
+          parent, BackdropTemplateMixin and "UIPanelCloseButtonNoScripts")
       addonData.buttons[i].Cancel:SetWidth(bh)
       addonData.buttons[i].Cancel:SetHeight(bh)
       addonData.buttons[i].Cancel:SetText("X")
       addonData.buttons[i].Cancel:SetPoint("TOPLEFT","SteaSummonButtonFrame","TOPLEFT", 10,-(((i-1)*bh)+hpad))
 
       --- Wait Time
-      addonData.buttons[i].Time = CreateFrame("Frame", "SteaSummonWaitTime"..i, addonData.buttonFrame)
+      addonData.buttons[i].Time = CreateFrame("Frame", "SteaSummonWaitTime"..i, addonData.buttonFrame, BackdropTemplateMixin and "BackdropTemplate")
       addonData.buttons[i].Time:SetWidth(bw)
       addonData.buttons[i].Time:SetHeight(bh)
       addonData.buttons[i].Time:SetPoint("TOPLEFT", addonData.buttonFrame, "TOPLEFT",bw + wpad + 108,-(((i-1)*bh)+hpad))
@@ -1304,7 +1322,7 @@ local summon = {
       addonData.buttons[i].Time["FS"]:SetText(string.format(SecondsToTime(0)))
 
       --- Priority
-      addonData.buttons[i].Priority = CreateFrame("Frame", "SteaSummonPriority"..i, addonData.buttonFrame)
+      addonData.buttons[i].Priority = CreateFrame("Frame", "SteaSummonPriority"..i, addonData.buttonFrame, BackdropTemplateMixin and "BackdropTemplate")
       addonData.buttons[i].Priority:SetWidth(bh)
       addonData.buttons[i].Priority:SetHeight(bh)
       addonData.buttons[i].Priority:SetPoint("TOPLEFT", addonData.buttonFrame, "TOPLEFT",bw + wpad + 1,-(((i-1)*bh)+hpad))
@@ -1337,7 +1355,7 @@ local summon = {
       addonData.buttons[i].Priority["FS"]:SetText("N")
 
       --- Status
-      addonData.buttons[i].Status = CreateFrame("Frame", "SteaSummonStatus"..i, addonData.buttonFrame)
+      addonData.buttons[i].Status = CreateFrame("Frame", "SteaSummonStatus"..i, addonData.buttonFrame, BackdropTemplateMixin and "BackdropTemplate")
       addonData.buttons[i].Status:SetWidth(bw)
       addonData.buttons[i].Status:SetHeight(bh)
       addonData.buttons[i].Status:SetPoint("TOPLEFT", addonData.buttonFrame, "TOPLEFT",bw + wpad + 27,-(((i-1)*bh)+hpad))
@@ -1371,8 +1389,8 @@ local summon = {
     if SteaSummonShardIcon then
       local _, itemLink = GetItemInfo(6265) -- "Soul Shard"
       for bag = 0, NUM_BAG_SLOTS do
-        for slot = 1, GetContainerNumSlots(bag) do
-          if(GetContainerItemLink(bag, slot) == itemLink) then
+        for slot = 1, C_Container.GetContainerNumSlots(bag) do
+          if(C_Container.GetContainerItemLink(bag, slot) == itemLink) then
             count = count + 1
           end
         end
@@ -1603,8 +1621,8 @@ local summon = {
 
     if self:isAtDestination() then
       if SteaSummonFrame then
-        SteaSummonFrame.destination:SetTextColor(0,1,0,.5)
-        SteaSummonFrame.location:SetTextColor(0,1,0,.5)
+        SteaSummonFrame.destination:SetTextColor(0,1,0,.8)
+        SteaSummonFrame.location:SetTextColor(0,1,0,.8)
       end
 
       if oldZone ~= self.myZone or oldLocation ~= self.myLocation then -- we changed location to destination
@@ -1612,8 +1630,8 @@ local summon = {
       end
     else
       if SteaSummonFrame then
-        SteaSummonFrame.destination:SetTextColor(1,1,1,.5)
-        SteaSummonFrame.location:SetTextColor(0,1,0,.5)
+        SteaSummonFrame.destination:SetTextColor(1,1,1,.8)
+        SteaSummonFrame.location:SetTextColor(0,1,0,.8)
       end
 
       if self.zone ~= "" and self.location ~= "" then -- destination is set

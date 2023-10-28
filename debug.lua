@@ -44,16 +44,20 @@ local debug = {
       end
     end
 
-    local f = CreateFrame("Frame", "DBFrame", UIParent, "AnimatedShineTemplate")
-    f:SetPoint("CENTER")
-    f:SetSize(300, 250)
-
-    f:SetBackdrop({
+    local backdropInfo = {
       bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
       edgeFile = "Interface\\PVPFrame\\UI-Character-PVP-Highlight", -- this one is neat
+      tile = false;
+      tileEdge = false;
+      tileSize = 0;
       edgeSize = 16,
-      insets = { left = 8, right = 6, top = 8, bottom = 8 },
-    })
+      insets = { left = 8, right = 6, top = 8, bottom = 8 }
+    }
+    local f = CreateFrame("Frame", "DBFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
+    f:SetPoint("CENTER")
+    f:SetSize(300, 250)
+    
+    f:OnBackdropLoaded(f:SetBackdrop(backdropInfo))
     f:SetBackdropBorderColor(0, .44, .87, 0.5) -- darkblue
 
     --- Movable
@@ -77,7 +81,7 @@ local debug = {
 
     --- Resizable
     f:SetResizable(true)
-    f:SetMinResize(150, 100)
+    f:SetResizeBounds(150, 100)
     f:Hide()
   end,
 
