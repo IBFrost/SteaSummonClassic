@@ -627,7 +627,7 @@ local summon = {
       addonData.buttonFrame = CreateFrame("Frame", "SteaSummonButtonFrame", SteaSummonFrame, BackdropTemplateMixin and "BackdropTemplate")
       local x, y = sf:GetSize()
       addonData.buttonFrame:SetSize(x-10, y)
-      addonData.buttonFrame:SetScale(SteaSummonSave.listSize/2)
+      addonData.buttonFrame:SetScale(SteaSummonSave.listSize)
       sf:SetScrollChild(addonData.buttonFrame)
 
       --- Table of summon info
@@ -751,7 +751,7 @@ local summon = {
         f.shards:SetBackdrop({
           bgFile = "Interface\\ICONS\\INV_Misc_Gem_Amethyst_02",
         })
-        f.shards:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 64, -6)
+        f.shards:SetPoint("TOPLEFT","SteaSummonFrame", "TOPLEFT", 72, -6)
         f.shards:SetSize(12,12)
 
         f.shards.count = f.shards:CreateFontString(nil,"ARTWORK", nil, 7)
